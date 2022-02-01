@@ -77,12 +77,14 @@ end
 class Player
   attr_reader :name, :symbol
 
-  @@number = 0
-
-  def initialize(symbol)
-    @@number += 1
-    @name = "Player #{@@number}"
+  def initialize(symbol, name)
+    @name = name
     @symbol = symbol
+  end
+
+  def move
+    print 'Enter valid coordinates(row, column) for move(eg. 1,2): '
+    gets.chomp
   end
 
   def to_s
@@ -91,34 +93,59 @@ class Player
 end
 
 ##
+# Represents a computer player in the tic-tac-toe
+class ComputerPlayer < Player
+  def move
+    "#{rand(0..2)},#{rand(0..2)}"
+  end
+end
+
+##
 # Represents a game of tic-tac-toe
 class Game
   def initialize
     @board = Board.new
-    @player_one = Player.new('X')
-    @player_two = Player.new('O')
+    @player_one = Player.new('X', 'Player 1')
     @finished = false
-    @turn = @player_one
   end
 
   def play_game
-    continue = true
-    while continue
-      new_game
-      print 'Play again?(y/n)'
+    loop do
+      option = display_game_menu
       @finished = false
-      continue = false if gets.chomp == 'n'
+      case option
+      when '1'
+        new_game(ComputerPlayer.new('O', 'Computer'))
+      when '2'
+        new_game(Player.new('O', 'Player 2'))
+      when '3'
+        break
+      end
     end
   end
 
   private
 
-  def new_game
+  def display_game_menu
+    puts 'Menu:'
+    puts '----------------------------'
+    puts '1> Single player vs Computer'
+    puts '2> 2 Players'
+    puts '3> Exit'
+    print 'Enter selection: '
+    input = gets.chomp
+    puts '----------------------------'
+    input
+  end
+
+  def new_game(player2)
     @board.clean
+    @player_two = player2
+    @turn = @player_one
     until @finished == true
       puts @board
       puts "Turn: #{@turn} (#{@turn.symbol})"
-      move_x, move_y = input_move.split(',')
+      move_x, move_y = get_move(@turn)
       @board.mark_board(move_x.to_i, move_y.to_i, @turn.symbol)
       change_turn
       @finished = true if @board.three_in_a_row? || @board.filled?
@@ -130,25 +157,23 @@ class Game
     @turn = @turn == @player_two ? @player_one : @player_two
   end
 
-  def input_move
-    input = ''
+  def get_move(player)
+    move = ''
     loop do
-      until input.match?(/^[0-2],[0-2]$/)
-        print 'Enter coordinates(row, column) for move(eg. 1,2): '
-        input = gets.chomp
-      end
-      break if @board.valid_move?(input.split(',')[0].to_i, input.split(',')[1].to_i)
-
-      puts 'Invalid move.'
-      input = ''
+      move = player.move
+      break if  move.match?(/^[0-2],[0-2]$/) &&
+                @board.valid_move?(move.split(',')[0].to_i,
+                                   move.split(',')[1].to_i)
     end
-    input
+    move.split(',')
   end
 
   def finish_game_message
     puts "\n------ GAME FINISHED! ------"
     puts @board
+    @finished = false
     if @board.three_in_a_row?
+      change_turn
       puts "Winner #{@turn}!!!"
     else
       puts 'TIE game'
